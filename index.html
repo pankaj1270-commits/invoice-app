@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Invoice Generator</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 14px; background: #eef0f3; color: #1f2328; line-height: 1.5; }
+
+/* ── TOP NAV ── */
+.topnav { background: #2c2c2c; color: #fff; display: flex; align-items: center; gap: 0; padding: 0 24px; height: 46px; font-size: 13px; }
+.topnav-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; margin-right: 24px; color: #fff; }
+.topnav-brand svg { width: 22px; height: 22px; }
+.topnav-tabs { display: flex; height: 100%; }
+.topnav-tab { padding: 0 16px; height: 100%; display: flex; align-items: center; color: #ccc; cursor: pointer; font-size: 13px; border-bottom: 3px solid transparent; transition: color .15s; }
+.topnav-tab:hover { color: #fff; }
+.topnav-tab.active { color: #fff; border-bottom-color: #fff; }
+.topnav-right { margin-left: auto; display: flex; gap: 16px; align-items: center; color: #ccc; font-size: 13px; }
+.topnav-right a { color: #ccc; text-decoration: none; }
+.topnav-right a:hover { color: #fff; }
+
+/* ── PAGE TITLE ── */
+.page-title-bar { background: #eef0f3; padding: 16px 24px 0; font-size: 18px; font-weight: 700; color: #1f2328; max-width: 1200px; margin: 0 auto; }
+
+/* ── MAIN LAYOUT ── */
+.main-wrap { display: flex; gap: 20px; padding: 14px 24px 40px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
+
+/* ── TOOLBAR ── */
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.tb-btn { padding: 7px 18px; border-radius: 6px; border: 1px solid #d0d5dd; background: #fff; color: #1f2328; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.tb-btn:hover { background: #f5f5f5; }
+.tb-btn.primary { background: #2c2c2c; color: #fff; border-color: #2c2c2c; }
+.tb-btn.primary:hover { background: #444; }
+.tb-btn.secondary { background: #fff; color: #1f2328; }
+.tb-divider { flex: 1; }
+.tb-center { display: flex; align-items: center; gap: 8px; color: #888; font-size: 13px; }
+
+/* ── FORM AREA ── */
+.form-col { flex: 1; min-width: 0; }
+.invoice-form { background: #fff; border: 1px solid #dde1e7; border-radius: 4px; padding: 32px 36px; }
+
+/* Title + Logo row */
+.title-logo-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; gap: 20px; }
+.invoice-title-input {
+  font-size: 28px; font-weight: 700; color: #aaa; border: 1px solid transparent;
+  border-radius: 4px; padding: 6px 10px; font-family: inherit; width: 260px;
+  background: transparent; outline: none;
+}
+.invoice-title-input:focus { border-color: #d0d5dd; background: #fafafa; color: #1f2328; }
+.invoice-title-input:hover { border-color: #e0e0e0; }
+.logo-upload-box {
+  width: 200px; height: 90px; border: 1.5px dashed #c9cdd3; border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; background: #fafafa; gap: 6px; flex-shrink: 0;
+}
+.logo-upload-box:hover { border-color: #3b82d4; }
+.logo-upload-box img { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+.logo-upload-box span { font-size: 12px; color: #888; }
+.logo-upload-box svg { color: #999; }
+
+/* From / Bill To */
+.parties-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 28px; }
+.party-block {}
+.party-heading { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 12px; }
+.form-field { display: grid; grid-template-columns: 110px 1fr; align-items: center; margin-bottom: 8px; gap: 8px; }
+.form-field label { font-size: 13px; color: #555; }
+.form-field input {
+  border: 1px solid #dde1e7; border-radius: 4px; padding: 7px 10px;
+  font-size: 13px; font-family: inherit; color: #1f2328; background: #fff; width: 100%;
+}
+.form-field input:focus { outline: none; border-color: #3b82d4; }
+.form-field input::placeholder { color: #bbb; }
+.show-more-link { font-size: 12px; color: #3b82d4; cursor: pointer; margin-top: 4px; display: inline-block; text-decoration: none; margin-left: 118px; }
+.show-more-link:hover { text-decoration: underline; }
+
+/* Invoice meta */
+.invoice-meta { margin-bottom: 24px; }
+.meta-field { display: grid; grid-template-columns: 110px 260px; align-items: center; margin-bottom: 8px; gap: 8px; }
+.meta-field label { font-size: 13px; color: #555; }
+.meta-field input, .meta-field select {
+  border: 1px solid #dde1e7; border-radius: 4px; padding: 7px 10px;
+  font-size: 13px; font-family: inherit; color: #1f2328; background: #fff; width: 100%;
+}
+.meta-field input:focus, .meta-field select:focus { outline: none; border-color: #3b82d4; }
+.meta-field .input-check { position: relative; display: flex; align-items: center; }
+.meta-field .input-check input { padding-right: 32px; }
+.meta-field .check-icon { position: absolute; right: 10px; color: #3b82d4; font-size: 16px; }
+
+/* Items table */
+.items-section { margin-bottom: 8px; }
+.items-header { display: grid; grid-template-columns: 36px 1fr 120px 80px 90px 110px; gap: 0; background: #f5f6f8; border: 1px solid #dde1e7; border-bottom: none; }
+.items-header-cell { padding: 9px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #888; }
+.items-header-cell.right { text-align: right; }
+
+.item-row { border: 1px solid #dde1e7; border-bottom: none; }
+.item-row-main { display: grid; grid-template-columns: 36px 1fr 120px 80px 90px 110px; gap: 0; align-items: stretch; }
+.item-del-cell { display: flex; align-items: center; justify-content: center; padding: 8px 4px; border-right: 1px solid #dde1e7; }
+.item-del-btn { background: #555; color: #fff; border: none; border-radius: 3px; width: 20px; height: 20px; font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.item-del-btn:hover { background: #e74c3c; }
+.item-desc-cell { padding: 4px 8px; border-right: 1px solid #dde1e7; display: flex; flex-direction: column; gap: 0; }
+.item-desc-input { border: none; outline: none; font-size: 13px; font-family: inherit; color: #1f2328; padding: 6px 2px; width: 100%; background: transparent; }
+.item-desc-input::placeholder { color: #bbb; }
+.item-note-input { border: 1px solid #dde1e7; border-radius: 3px; padding: 6px 8px; font-size: 12px; font-family: inherit; color: #666; resize: none; min-height: 60px; width: 100%; margin-top: 2px; background: #fafafa; }
+.item-note-input:focus { outline: none; border-color: #3b82d4; }
+.item-note-input::placeholder { color: #ccc; }
+.item-char-count { font-size: 11px; color: #aaa; text-align: right; margin-top: 2px; }
+.item-num-cell { padding: 4px 8px; border-right: 1px solid #dde1e7; display: flex; align-items: flex-start; padding-top: 10px; }
+.item-num-input { border: 1px solid #dde1e7; border-radius: 4px; padding: 6px 8px; font-size: 13px; font-family: inherit; color: #1f2328; width: 100%; text-align: right; }
+.item-num-input:focus { outline: none; border-color: #3b82d4; }
+.item-amt-cell { padding: 4px 10px; display: flex; align-items: flex-start; justify-content: flex-end; padding-top: 12px; font-size: 13px; font-weight: 500; color: #1f2328; }
+.items-footer { border: 1px solid #dde1e7; }
+.add-item-row { padding: 10px 36px; }
+.add-btn { background: #2c2c2c; color: #fff; border: none; border-radius: 5px; width: 32px; height: 32px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.add-btn:hover { background: #444; }
+
+/* Totals */
+.totals-section { display: flex; justify-content: flex-end; margin: 0 0 28px; padding: 16px 0 0; }
+.totals-inner { width: 300px; }
+.totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+.totals-row.grand { font-weight: 800; font-size: 15px; padding-top: 8px; border-top: 1.5px solid #e5e7eb; margin-top: 4px; }
+.totals-label { color: #555; }
+.totals-val { font-weight: 500; }
+
+/* Notes */
+.notes-section { margin-bottom: 28px; }
+.notes-label { font-size: 14px; font-weight: 600; color: #1f2328; margin-bottom: 8px; }
+.notes-textarea { width: 100%; border: 1px solid #dde1e7; border-radius: 4px; padding: 10px 12px; font-size: 13px; font-family: inherit; color: #1f2328; resize: none; min-height: 100px; }
+.notes-textarea:focus { outline: none; border-color: #3b82d4; }
+.notes-textarea::placeholder { color: #bbb; }
+.char-count-row { text-align: right; font-size: 11px; color: #aaa; margin-top: 3px; }
+
+/* Signature */
+.sig-section { margin-bottom: 28px; }
+.sig-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.sig-label { font-size: 14px; font-weight: 600; color: #1f2328; }
+.sig-add-btn { background: #2c2c2c; color: #fff; border: none; border-radius: 5px; width: 28px; height: 28px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sig-add-btn:hover { background: #444; }
+.sig-box { border: 1px solid #dde1e7; border-radius: 4px; padding: 16px; display: none; }
+.sig-canvas { border: 1px dashed #c9cdd3; border-radius: 4px; width: 100%; height: 100px; cursor: crosshair; touch-action: none; background: #fafafa; display: block; }
+.sig-actions { display: flex; gap: 8px; margin-top: 8px; }
+.sig-clear-btn { font-size: 12px; color: #e74c3c; background: none; border: 1px solid #e74c3c; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-family: inherit; }
+
+/* Photos */
+.photos-section { margin-bottom: 28px; }
+.photos-label { font-size: 14px; font-weight: 600; color: #1f2328; margin-bottom: 8px; }
+.photo-add-box { width: 120px; height: 80px; border: 1.5px dashed #c9cdd3; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: #fafafa; gap: 4px; }
+.photo-add-box:hover { border-color: #3b82d4; }
+.photo-add-box span { font-size: 11px; color: #888; }
+.photos-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.photo-thumb { position: relative; width: 100px; height: 80px; border: 1px solid #dde1e7; border-radius: 6px; overflow: hidden; }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb-del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+
+/* ── RIGHT SIDEBAR ── */
+.sidebar { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0; }
+.sidebar-section { background: #fff; border: 1px solid #dde1e7; border-radius: 4px; margin-bottom: 14px; padding: 14px 16px; }
+.sidebar-heading { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 10px; }
+.color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cswatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2.5px solid transparent; display: flex; align-items: center; justify-content: center; }
+.cswatch.active { border-color: #2c2c2c; }
+.cswatch:hover { opacity: .85; }
+.cswatch-none { background: #fff; border-color: #ccc !important; }
+.cswatch-none svg { display: block; }
+.sb-label { font-size: 12px; color: #555; margin-bottom: 5px; }
+.sb-select { width: 100%; border: 1px solid #dde1e7; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: inherit; color: #1f2328; background: #fff; margin-bottom: 12px; }
+.sb-select:focus { outline: none; border-color: #3b82d4; }
+.sb-select:last-child { margin-bottom: 0; }
+.currency-display { display: flex; align-items: center; gap: 8px; border: 1px solid #dde1e7; border-radius: 4px; padding: 7px 10px; font-size: 13px; background: #fff; }
+.currency-flag { font-size: 18px; }
+.currency-sym { font-weight: 700; color: #555; margin-left: auto; }
+
+/* ── PRINT / PDF ── */
+#printView { display: none; }
+
+@media print {
+  @page { margin: 0; size: A4; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body > *:not(#printView) { display: none !important; }
+  #printView {
+    display: block !important;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    box-sizing: border-box;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  .pv-page { page-break-after: avoid; page-break-inside: avoid; }
+}
+
+/* Print view styles */
+#printView {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 12.5px;
+  color: #1f2328;
+  background: #fff;
+  line-height: 1.55;
+}
+.pv-page {
+  padding: 14mm 16mm 14mm;
+  box-sizing: border-box;
+}
+.pv-accent { height: 5px; margin: -14mm -16mm 10mm; display: block; }
+.pv-header { display: table; width: 100%; margin-bottom: 8mm; }
+.pv-header-left { display: table-cell; vertical-align: top; width: 50%; }
+.pv-header-right { display: table-cell; vertical-align: top; text-align: right; }
+.pv-title { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin-bottom: 4px; }
+.pv-inv-num { font-size: 13px; color: #555; margin-bottom: 2px; }
+.pv-inv-date-table { display: table; margin-left: auto; margin-top: 6px; border-collapse: collapse; }
+.pv-inv-date-row { display: table-row; }
+.pv-inv-date-label { display: table-cell; font-size: 11px; color: #888; padding: 2px 12px 2px 0; text-align: right; white-space: nowrap; }
+.pv-inv-date-val { display: table-cell; font-size: 11px; font-weight: 600; color: #1f2328; padding: 2px 0; text-align: right; white-space: nowrap; }
+.pv-logo { max-height: 64px; max-width: 160px; object-fit: contain; display: block; }
+.pv-biz-name { font-size: 20px; font-weight: 800; color: #1f2328; margin-bottom: 2px; }
+
+.pv-parties { display: table; width: 100%; margin-bottom: 6mm; }
+.pv-party-cell { display: table-cell; width: 50%; vertical-align: top; padding-right: 8mm; }
+.pv-party-cell:last-child { padding-right: 0; padding-left: 4mm; }
+.pv-party-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #999; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+.pv-party-name { font-size: 13px; font-weight: 700; color: #1f2328; margin-bottom: 2px; }
+.pv-party-line { font-size: 11px; color: #555; line-height: 1.55; }
+
+.pv-divider { border: none; border-top: 1px solid #e0e0e0; margin: 0 0 5mm; }
+
+/* Items table — fixed columns so they never wrap */
+.pv-items-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 0; }
+.pv-items-table colgroup col.c-desc { width: 48%; }
+.pv-items-table colgroup col.c-rate { width: 18%; }
+.pv-items-table colgroup col.c-qty  { width: 12%; }
+.pv-items-table colgroup col.c-amt  { width: 22%; }
+.pv-items-table thead tr { background: #f7f8fa; }
+.pv-items-table th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #777; padding: 5px 8px; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; text-align: left; }
+.pv-items-table th.r { text-align: right; }
+.pv-items-table td { padding: 7px 8px; font-size: 12px; color: #1f2328; border-bottom: 1px solid #eeeeee; vertical-align: top; word-break: break-word; }
+.pv-items-table td.r { text-align: right; color: #333; }
+.pv-desc-main { font-weight: 600; font-size: 12px; }
+.pv-desc-note { font-size: 10.5px; color: #777; margin-top: 2px; line-height: 1.4; }
+
+/* Totals */
+.pv-totals-wrap { display: table; margin-left: auto; margin-top: 4mm; margin-bottom: 6mm; width: 62mm; }
+.pv-totals-row { display: table-row; }
+.pv-totals-label { display: table-cell; font-size: 11.5px; color: #666; padding: 3px 10px 3px 0; text-align: left; }
+.pv-totals-val   { display: table-cell; font-size: 11.5px; font-weight: 600; color: #1f2328; padding: 3px 0; text-align: right; white-space: nowrap; }
+.pv-totals-sep { display: table-row; height: 1px; }
+.pv-totals-sep td, .pv-totals-sep-line { border-top: 1px solid #e0e0e0; }
+.pv-grand .pv-totals-label,
+.pv-grand .pv-totals-val { font-size: 13px; font-weight: 800; color: #1f2328; border-top: 2px solid #1f2328; padding-top: 5px; }
+
+/* Notes */
+.pv-notes-section { border-top: 1px solid #e0e0e0; padding-top: 4mm; margin-top: 4mm; }
+.pv-section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #999; margin-bottom: 4px; }
+.pv-notes-text { font-size: 11px; color: #444; white-space: pre-wrap; line-height: 1.6; }
+
+/* Signature */
+.pv-sig-section { margin-top: 6mm; }
+.pv-sig-img { max-height: 50px; max-width: 160px; display: block; border-bottom: 1.5px solid #aaa; padding-bottom: 3px; margin-bottom: 2px; }
+.pv-sig-name { font-size: 10px; color: #888; }
+
+/* Photos */
+.pv-photos-section { margin-top: 5mm; border-top: 1px solid #e0e0e0; padding-top: 4mm; }
+.pv-photos-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pv-photo { width: 28mm; height: 22mm; object-fit: cover; border-radius: 2px; border: 1px solid #ddd; display: block; }
+
+/* Footer line */
+.pv-footer { margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #eee; font-size: 9.5px; color: #bbb; text-align: center; }
+
+@media (max-width: 900px) {
+  .main-wrap { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  .sidebar-section { flex: 1; min-width: 160px; }
+  .parties-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV 
+<div class="topnav">
+  <div class="topnav-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    Invoice Simple
+  </div>
+  <div class="topnav-tabs">
+    <div class="topnav-tab active">Invoices</div>
+    <div class="topnav-tab">Estimates</div>
+    <div class="topnav-tab">Expenses</div>
+    <div class="topnav-tab">Clients</div>
+    <div class="topnav-tab">Items</div>
+    <div class="topnav-tab">Reports</div>
+  </div>
+  <div class="topnav-right">
+    <a href="#">Settings</a>
+    <a href="#">Login</a>
+    <span>|</span>
+    <a href="#">Sign Up</a>
+  </div>
+</div>
+-->
+<div class="page-title-bar">Invoice Generator</div>
+
+<div class="main-wrap">
+  <!-- FORM COLUMN -->
+  <div class="form-col">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="tb-btn" id="previewBtn">Preview</button>
+      <div class="tb-divider"></div>
+      <div class="tb-center">
+        <span id="paymentSchedLabel" style="color:#aaa;">Payment scheduling</span>
+      </div>
+      <div class="tb-divider"></div>
+      <button class="tb-btn secondary" id="pdfBtn">PDF</button>
+      <button class="tb-btn primary" id="emailBtn">Email Invoice</button>
+    </div>
+
+    <!-- Invoice Form -->
+    <div class="invoice-form" id="invoiceForm">
+
+      <!-- Title + Logo -->
+      <div class="title-logo-row">
+        <input class="invoice-title-input" id="invoiceTitle" type="text" value="Invoice" placeholder="Invoice" />
+        <div class="logo-upload-box" id="logoBox" title="Click to upload logo">
+          <img id="logoImg" alt="Logo" />
+          <svg id="logoIcon" xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span id="logoText">+ Logo</span>
+        </div>
+        <input type="file" id="logoInput" accept="image/*" style="display:none;" />
+      </div>
+
+      <!-- From / Bill To -->
+      <div class="parties-row">
+        <!-- FROM -->
+        <div class="party-block">
+          <div class="party-heading">From</div>
+          <div class="form-field"><label>Name</label><input id="fromName" placeholder="Business Name" /></div>
+          <div class="form-field"><label>Email</label><input id="fromEmail" type="email" placeholder="name@business.com" /></div>
+          <div class="form-field"><label>Address</label><input id="fromAddr" placeholder="Street" /></div>
+          <div id="fromExtra" style="display:none;">
+            <div class="form-field"><label>City</label><input id="fromCity" placeholder="City" /></div>
+            <div class="form-field"><label>State / ZIP</label><input id="fromState" placeholder="State, ZIP" /></div>
+            <div class="form-field"><label>Country</label><input id="fromCountry" placeholder="Country" /></div>
+          </div>
+          <div class="form-field"><label>Phone</label><input id="fromPhone" placeholder="(123) 456 789" /></div>
+          <div class="form-field"><label>Business Number</label><input id="fromBizNo" placeholder="123-45-6789" /></div>
+          <a class="show-more-link" id="showMoreFrom">Show additional business details</a>
+        </div>
+        <!-- BILL TO -->
+        <div class="party-block">
+          <div class="party-heading">Bill To</div>
+          <div class="form-field"><label>Name</label><input id="toName" placeholder="Client Name" /></div>
+          <div class="form-field"><label>Email</label><input id="toEmail" type="email" placeholder="name@client.com" /></div>
+          <div class="form-field"><label>Address</label><input id="toAddr" placeholder="Street" /></div>
+          <div id="toExtra" style="display:none;">
+            <div class="form-field"><label>City</label><input id="toCity" placeholder="City" /></div>
+            <div class="form-field"><label>State / ZIP</label><input id="toState" placeholder="State, ZIP" /></div>
+            <div class="form-field"><label>Country</label><input id="toCountry" placeholder="Country" /></div>
+          </div>
+          <div class="form-field"><label>Phone</label><input id="toPhone" placeholder="(123) 456 789" /></div>
+          <div class="form-field"><label>Mobile</label><input id="toMobile" placeholder="(123) 456 789" /></div>
+          <div class="form-field"><label>Fax</label><input id="toFax" placeholder="(123) 456 789" /></div>
+        </div>
+      </div>
+
+      <!-- Invoice Meta -->
+      <div class="invoice-meta">
+        <div class="meta-field">
+          <label>Number</label>
+          <div class="input-check">
+            <input id="invNumber" value="INV0001" />
+            <span class="check-icon">&#10003;</span>
+          </div>
+        </div>
+        <div class="meta-field">
+          <label>Date</label>
+          <input id="invDate" type="date" />
+        </div>
+        <div class="meta-field">
+          <label>Terms</label>
+          <select id="invTerms">
+            <option value="on_receipt">On Receipt</option>
+            <option value="net15">Net 15</option>
+            <option value="net30">Net 30</option>
+            <option value="net60">Net 60</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="meta-field" id="dueDateRow" style="display:none;">
+          <label>Due Date</label>
+          <input id="dueDate" type="date" />
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="items-section">
+        <div class="items-header">
+          <div class="items-header-cell"></div>
+          <div class="items-header-cell">Description</div>
+          <div class="items-header-cell right">Rate</div>
+          <div class="items-header-cell right">QTY</div>
+          <div class="items-header-cell right">Tax %</div>
+          <div class="items-header-cell right">Amount</div>
+        </div>
+        <div id="itemsBody"></div>
+        <div class="items-footer">
+          <div class="add-item-row">
+            <button class="add-btn" id="addItemBtn" title="Add item">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals-section">
+        <div class="totals-inner">
+          <div class="totals-row">
+            <span class="totals-label">Subtotal</span>
+            <span class="totals-val" id="sumSubtotal">₹0.00</span>
+          </div>
+          <div class="totals-row" id="discountRow" style="display:none;">
+            <span class="totals-label" id="discountLabel">Discount</span>
+            <span class="totals-val" id="sumDiscount" style="color:#e74c3c;">-₹0.00</span>
+          </div>
+          <div class="totals-row" id="taxTotalRow">
+            <span class="totals-label" id="taxLabel">Tax</span>
+            <span class="totals-val" id="sumTax">₹0.00</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">Total</span>
+            <span class="totals-val" id="sumTotal">₹0.00</span>
+          </div>
+          <div class="totals-row grand">
+            <span>Balance Due</span>
+            <span id="sumBalance">₹0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="notes-section">
+        <div class="notes-label">Notes</div>
+        <textarea class="notes-textarea" id="notesText" maxlength="5000" placeholder="Notes - any relevant information not covered, additional terms and conditions"></textarea>
+        <div class="char-count-row"><span id="notesCount">0</span>/5000</div>
+      </div>
+
+      <!-- Signature -->
+      <div class="sig-section">
+        <div class="sig-header">
+          <span class="sig-label">Signature</span>
+          <button class="sig-add-btn" id="sigToggleBtn" title="Add Signature">+</button>
+        </div>
+        <div class="sig-box" id="sigBox">
+          <canvas class="sig-canvas" id="sigCanvas" width="600" height="100"></canvas>
+          <div class="sig-actions">
+            <button class="sig-clear-btn" id="sigClearBtn">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Photos -->
+      <div class="photos-section">
+        <div class="photos-label">Photos</div>
+        <div class="photos-grid" id="photosGrid">
+          <div class="photo-add-box" id="photoAddBox" title="Add photo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#bbb" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Add Photo</span>
+          </div>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none;" />
+      </div>
+
+    </div><!-- /invoice-form -->
+  </div><!-- /form-col -->
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Color -->
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Color</div>
+      <div class="color-grid" id="colorGrid">
+        <div class="cswatch cswatch-none active" data-color="none" title="None">
+          <svg width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="12" x2="12" y2="2" stroke="#c00" stroke-width="1.5"/><circle cx="7" cy="7" r="6" stroke="#ccc" stroke-width="1" fill="none"/></svg>
+        </div>
+        <div class="cswatch" style="background:#2c2c2c;" data-color="#2c2c2c" title="Black"></div>
+        <div class="cswatch" style="background:#4a4a4a;" data-color="#4a4a4a" title="Dark Gray"></div>
+        <div class="cswatch" style="background:#2d5fa6;" data-color="#2d5fa6" title="Navy"></div>
+        <div class="cswatch" style="background:#c0392b;" data-color="#c0392b" title="Red"></div>
+        <div class="cswatch" style="background:#e74c7c;" data-color="#e74c7c" title="Pink"></div>
+        <div class="cswatch" style="background:#7c3aed;" data-color="#7c3aed" title="Purple"></div>
+        <div class="cswatch" style="background:#3b3bcc;" data-color="#3b3bcc" title="Dark Blue"></div>
+        <div class="cswatch" style="background:#3b82d4;" data-color="#3b82d4" title="Blue"></div>
+        <div class="cswatch" style="background:#0ea5e9;" data-color="#0ea5e9" title="Sky"></div>
+        <div class="cswatch" style="background:#16a34a;" data-color="#16a34a" title="Green"></div>
+        <div class="cswatch" style="background:#65a30d;" data-color="#65a30d" title="Lime"></div>
+        <div class="cswatch" style="background:#ca8a04;" data-color="#ca8a04" title="Yellow"></div>
+      </div>
+    </div>
+
+    <!-- Discount -->
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Discount</div>
+      <div class="sb-label">Type</div>
+      <select class="sb-select" id="discType">
+        <option value="none">None</option>
+        <option value="pct">Percentage (%)</option>
+        <option value="flat">Flat Amount</option>
+      </select>
+      <div id="discRateRow" style="display:none;">
+        <div class="sb-label">Amount</div>
+        <input id="discRate" type="number" min="0" step="any" placeholder="0"
+          style="width:100%;border:1px solid #dde1e7;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;" />
+      </div>
+    </div>
+
+    <!-- Currency -->
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Currency</div>
+      <select class="sb-select" id="currency">
+        <option value="₹|INR">INR – ₹</option>
+        <option value="$|USD">USD – $</option>
+        <option value="€|EUR">EUR – €</option>
+        <option value="£|GBP">GBP – £</option>
+        <option value="¥|JPY">JPY – ¥</option>
+        <option value="A$|AUD">AUD – A$</option>
+        <option value="C$|CAD">CAD – C$</option>
+        <option value="AED|AED">AED</option>
+      </select>
+    </div>
+
+    <!-- Actions -->
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Actions</div>
+      <button class="tb-btn primary" id="printBtn" style="width:100%;margin-bottom:8px;">Print / Save PDF</button>
+      <button class="tb-btn" id="resetBtn" style="width:100%;">Reset</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- PRINT VIEW (hidden; built before print) -->
+<div id="printView"></div>
+
+<footer style="text-align:center;font-size:12px;color:#888;border-top:1px solid #dde1e7;padding:14px 0;background:#fff;"></footer>
+
+<script>
+(function(){
+
+// ── STATE ──
+var accentColor = 'none';
+var logoDataUrl = null;
+var photos = [];
+var sigDrawing = false;
+var sigLast = null;
+
+var items = [
+  { desc: '', note: '', rate: 0, qty: 1 }
+];
+
+// ── HELPERS ──
+function $id(id){ return document.getElementById(id); }
+function getCur(){
+  var v = $id('currency').value || '₹|INR';
+  return v.split('|')[0];
+}
+function fmtMoney(n){
+  return getCur() + parseFloat(n || 0).toFixed(2);
+}
+function todayStr(){
+  return new Date().toISOString().split('T')[0];
+}
+function plusDays(n){
+  var d = new Date(); d.setDate(d.getDate()+n);
+  return d.toISOString().split('T')[0];
+}
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── INIT DATES ──
+$id('invDate').value = todayStr();
+$id('dueDate').value = plusDays(30);
+
+// ── ACCENT COLOR ──
+$id('colorGrid').addEventListener('click', function(e){
+  var sw = e.target.closest('.cswatch');
+  if (!sw) return;
+  document.querySelectorAll('.cswatch').forEach(function(s){ s.classList.remove('active'); });
+  sw.classList.add('active');
+  accentColor = sw.getAttribute('data-color');
+  applyAccent();
+  recalc();
+});
+
+function applyAccent(){
+  var form = $id('invoiceForm');
+  if (accentColor === 'none'){
+    form.style.borderTop = '';
+  } else {
+    form.style.borderTop = '5px solid ' + accentColor;
+  }
+  // Also color the INVOICE title word if editable value is "Invoice"
+  var titleEl = $id('invoiceTitle');
+  if (accentColor !== 'none'){
+    titleEl.style.color = accentColor;
+  } else {
+    titleEl.style.color = '';
+  }
+}
+
+// ── LOGO ──
+$id('logoBox').addEventListener('click', function(){
+  $id('logoInput').click();
+});
+$id('logoInput').addEventListener('change', function(e){
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    logoDataUrl = ev.target.result;
+    var img = $id('logoImg');
+    img.src = logoDataUrl;
+    img.style.display = 'block';
+    $id('logoIcon').style.display = 'none';
+    $id('logoText').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── SHOW MORE (FROM) ──
+var fromExpanded = false;
+$id('showMoreFrom').addEventListener('click', function(e){
+  e.preventDefault();
+  fromExpanded = !fromExpanded;
+  $id('fromExtra').style.display = fromExpanded ? '' : 'none';
+  this.textContent = fromExpanded ? 'Hide additional details' : 'Show additional business details';
+});
+
+// ── TERMS ──
+$id('invTerms').addEventListener('change', function(){
+  var v = this.value;
+  $id('dueDateRow').style.display = (v === 'custom') ? '' : 'none';
+});
+
+// ── DISCOUNT ──
+$id('discType').addEventListener('change', function(){
+  var show = this.value !== 'none';
+  $id('discRateRow').style.display = show ? '' : 'none';
+  $id('discountRow').style.display = show ? '' : 'none';
+  recalc();
+});
+$id('discRate') && $id('discRate').addEventListener('input', recalc);
+
+// ── CURRENCY ──
+$id('currency').addEventListener('change', recalc);
+
+// ── NOTES CHAR COUNT ──
+$id('notesText').addEventListener('input', function(){
+  $id('notesCount').textContent = this.value.length;
+});
+
+// ── LINE ITEMS ──
+function renderItems(){
+  var tbody = $id('itemsBody');
+  tbody.innerHTML = '';
+  items.forEach(function(item, idx){
+    var div = document.createElement('div');
+    div.className = 'item-row';
+
+    var main = document.createElement('div');
+    main.className = 'item-row-main';
+
+    // del cell
+    var delCell = document.createElement('div');
+    delCell.className = 'item-del-cell';
+    var delBtn = document.createElement('button');
+    delBtn.className = 'item-del-btn';
+    delBtn.title = 'Remove';
+    delBtn.innerHTML = '&times;';
+    delBtn.addEventListener('click', function(){ removeItem(idx); });
+    delCell.appendChild(delBtn);
+
+    // desc cell
+    var descCell = document.createElement('div');
+    descCell.className = 'item-desc-cell';
+    var descInput = document.createElement('input');
+    descInput.className = 'item-desc-input';
+    descInput.placeholder = 'Item Description';
+    descInput.value = item.desc;
+    descInput.addEventListener('input', function(){ items[idx].desc = this.value; recalc(); });
+    var noteTA = document.createElement('textarea');
+    noteTA.className = 'item-note-input';
+    noteTA.placeholder = 'Additional details';
+    noteTA.maxLength = 5000;
+    noteTA.value = item.note;
+    noteTA.rows = 3;
+    noteTA.addEventListener('input', function(){
+      items[idx].note = this.value;
+      charSpan.textContent = this.value.length;
+    });
+    var charRow = document.createElement('div');
+    charRow.className = 'item-char-count';
+    var charSpan = document.createElement('span');
+    charSpan.textContent = item.note.length;
+    charRow.appendChild(charSpan);
+    charRow.appendChild(document.createTextNode('/5000'));
+    descCell.appendChild(descInput);
+    descCell.appendChild(noteTA);
+    descCell.appendChild(charRow);
+
+    // rate cell
+    var rateCell = document.createElement('div');
+    rateCell.className = 'item-num-cell';
+    var rateInput = document.createElement('input');
+    rateInput.className = 'item-num-input';
+    rateInput.type = 'number'; rateInput.min = '0'; rateInput.step = 'any';
+    rateInput.value = item.rate.toFixed(2);
+    rateInput.addEventListener('input', function(){ items[idx].rate = parseFloat(this.value)||0; recalc(); });
+    rateCell.appendChild(rateInput);
+
+    // qty cell
+    var qtyCell = document.createElement('div');
+    qtyCell.className = 'item-num-cell';
+    var qtyInput = document.createElement('input');
+    qtyInput.className = 'item-num-input';
+    qtyInput.type = 'number'; qtyInput.min = '0'; qtyInput.step = 'any';
+    qtyInput.value = item.qty;
+    qtyInput.addEventListener('input', function(){ items[idx].qty = parseFloat(this.value)||0; recalc(); });
+    qtyCell.appendChild(qtyInput);
+
+    // tax % cell (per-item)
+    var taxCell = document.createElement('div');
+    taxCell.className = 'item-num-cell';
+    var taxInput = document.createElement('input');
+    taxInput.className = 'item-num-input';
+    taxInput.type = 'number'; taxInput.min = '0'; taxInput.max = '100'; taxInput.step = 'any';
+    taxInput.placeholder = '0';
+    taxInput.value = item.tax > 0 ? item.tax : '';
+    taxInput.addEventListener('input', function(){ items[idx].tax = parseFloat(this.value)||0; recalc(); });
+    taxCell.appendChild(taxInput);
+
+    // amount cell
+    var amtCell = document.createElement('div');
+    amtCell.className = 'item-amt-cell';
+    amtCell.id = 'item-amt-' + idx;
+    var base = (item.rate||0) * (item.qty||0);
+    amtCell.textContent = fmtMoney(base + base * (item.tax||0) / 100);
+
+    main.appendChild(delCell);
+    main.appendChild(descCell);
+    main.appendChild(rateCell);
+    main.appendChild(qtyCell);
+    main.appendChild(taxCell);
+    main.appendChild(amtCell);
+    div.appendChild(main);
+    tbody.appendChild(div);
+  });
+}
+
+function addItem(){
+  items.push({ desc: '', note: '', rate: 0, qty: 1, tax: 0 });
+  renderItems();
+  recalc();
+}
+
+function removeItem(idx){
+  if (items.length === 1){ items[0] = {desc:'',note:'',rate:0,qty:1,tax:0}; renderItems(); recalc(); return; }
+  items.splice(idx, 1);
+  renderItems();
+  recalc();
+}
+
+$id('addItemBtn').addEventListener('click', addItem);
+
+// ── RECALC ──
+function recalc(){
+  var cur = getCur();
+  var subtotal = 0;
+  var taxTotal = 0;
+
+  items.forEach(function(it, i){
+    var base = (it.rate||0) * (it.qty||0);
+    var itemTax = base * (it.tax||0) / 100;
+    var lineAmt = base + itemTax;
+    subtotal += base;
+    taxTotal += itemTax;
+    var cell = document.getElementById('item-amt-'+i);
+    if (cell) cell.textContent = cur + lineAmt.toFixed(2);
+  });
+
+  // discount (applied to subtotal before tax)
+  var discType = $id('discType').value;
+  var discRate = parseFloat($id('discRate') ? $id('discRate').value : 0) || 0;
+  var discAmt = 0;
+  if (discType === 'pct')  discAmt = subtotal * discRate / 100;
+  if (discType === 'flat') discAmt = discRate;
+  var discLabel = discType === 'pct' ? 'Discount (' + discRate + '%)' : 'Discount';
+  $id('discountLabel').textContent = discLabel;
+  $id('sumDiscount').textContent = '-' + cur + discAmt.toFixed(2);
+
+  // tax row — always visible, shows sum of all per-item taxes
+  $id('taxLabel').textContent = 'Tax';
+  $id('sumTax').textContent = cur + taxTotal.toFixed(2);
+  // hide tax row only when all items have 0% tax
+  $id('taxTotalRow').style.display = taxTotal > 0 ? '' : 'none';
+
+  var total = subtotal - discAmt + taxTotal;
+
+  $id('sumSubtotal').textContent = cur + subtotal.toFixed(2);
+  $id('sumTotal').textContent    = cur + total.toFixed(2);
+  $id('sumBalance').textContent  = cur + total.toFixed(2);
+}
+
+// ── SIGNATURE ──
+var sigOpen = false;
+$id('sigToggleBtn').addEventListener('click', function(){
+  sigOpen = !sigOpen;
+  $id('sigBox').style.display = sigOpen ? '' : 'none';
+  this.textContent = sigOpen ? '−' : '+';
+});
+
+var canvas = $id('sigCanvas');
+var ctx = canvas.getContext('2d');
+ctx.strokeStyle = '#1f2328';
+ctx.lineWidth = 2;
+ctx.lineCap = 'round';
+
+function getSigPos(e){
+  var rect = canvas.getBoundingClientRect();
+  var scaleX = canvas.width / rect.width;
+  var scaleY = canvas.height / rect.height;
+  var src = e.touches ? e.touches[0] : e;
+  return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+}
+
+canvas.addEventListener('mousedown', function(e){ sigDrawing = true; sigLast = getSigPos(e); });
+canvas.addEventListener('mousemove', function(e){
+  if (!sigDrawing) return;
+  var pos = getSigPos(e);
+  ctx.beginPath(); ctx.moveTo(sigLast.x, sigLast.y); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+  sigLast = pos;
+});
+canvas.addEventListener('mouseup', function(){ sigDrawing = false; });
+canvas.addEventListener('mouseleave', function(){ sigDrawing = false; });
+canvas.addEventListener('touchstart', function(e){ e.preventDefault(); sigDrawing = true; sigLast = getSigPos(e); }, {passive:false});
+canvas.addEventListener('touchmove', function(e){
+  e.preventDefault();
+  if (!sigDrawing) return;
+  var pos = getSigPos(e);
+  ctx.beginPath(); ctx.moveTo(sigLast.x, sigLast.y); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+  sigLast = pos;
+}, {passive:false});
+canvas.addEventListener('touchend', function(){ sigDrawing = false; });
+
+$id('sigClearBtn').addEventListener('click', function(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+// ── PHOTOS ──
+$id('photoAddBox').addEventListener('click', function(){
+  $id('photoInput').click();
+});
+$id('photoInput').addEventListener('change', function(e){
+  Array.from(e.target.files).forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      photos.push(ev.target.result);
+      renderPhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+function renderPhotos(){
+  var grid = $id('photosGrid');
+  // remove existing thumbs (keep add box)
+  var thumbs = grid.querySelectorAll('.photo-thumb');
+  thumbs.forEach(function(t){ t.remove(); });
+  photos.forEach(function(src, i){
+    var div = document.createElement('div');
+    div.className = 'photo-thumb';
+    var img = document.createElement('img');
+    img.src = src;
+    var del = document.createElement('button');
+    del.className = 'photo-thumb-del';
+    del.innerHTML = '&times;';
+    del.addEventListener('click', function(){ photos.splice(i,1); renderPhotos(); });
+    div.appendChild(img); div.appendChild(del);
+    grid.insertBefore(div, $id('photoAddBox'));
+  });
+}
+
+// ── BUILD PRINT VIEW ──
+function fmtDateDisplay(str){
+  if (!str) return '';
+  var p = str.split('-'); if (p.length < 3) return str;
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return parseInt(p[2]) + ' ' + months[parseInt(p[1])-1] + ' ' + p[0];
+}
+
+function buildPrintView(){
+  var cur = getCur();
+  var title   = $id('invoiceTitle').value || 'Invoice';
+  var invNum  = $id('invNumber').value || '';
+  var invDate = fmtDateDisplay($id('invDate').value);
+  var terms   = $id('invTerms');
+  var termsText = terms.options[terms.selectedIndex].text;
+  var dueDate = $id('dueDate').value ? fmtDateDisplay($id('dueDate').value) : '';
+
+  // from
+  var fName  = $id('fromName').value;
+  var fEmail = $id('fromEmail').value;
+  var fAddr  = $id('fromAddr').value;
+  var fCity  = $id('fromCity').value;
+  var fState = $id('fromState').value;
+  var fCountry = $id('fromCountry').value;
+  var fPhone = $id('fromPhone').value;
+  var fBizNo = $id('fromBizNo').value;
+
+  // to
+  var tName  = $id('toName').value;
+  var tEmail = $id('toEmail').value;
+  var tAddr  = $id('toAddr').value;
+  var tCity  = $id('toCity').value;
+  var tState = $id('toState').value;
+  var tCountry = $id('toCountry').value;
+  var tPhone = $id('toPhone').value;
+  var tMobile = $id('toMobile').value;
+  var tFax   = $id('toFax').value;
+
+  var notes  = $id('notesText').value;
+
+  // (totals are recalculated below after items are known)
+
+  // accent
+  var acBar = accentColor !== 'none'
+    ? '<div class="pv-accent" style="background:' + accentColor + ';"></div>'
+    : '';
+  var titleColor = accentColor !== 'none' ? ' style="color:' + accentColor + ';"' : '';
+
+  // logo or business name
+  var logoHtml = logoDataUrl
+    ? '<img class="pv-logo" src="' + logoDataUrl + '" alt="Logo" />'
+    : (fName ? '<div style="font-size:20px;font-weight:800;color:#1f2328;">' + esc(fName) + '</div>' : '');
+
+  // from lines
+  var fromLines = '';
+  if (fName)    fromLines += '<div class="pv-party-name">' + esc(fName) + '</div>';
+  if (fEmail)   fromLines += '<div class="pv-party-line">' + esc(fEmail) + '</div>';
+  if (fAddr)    fromLines += '<div class="pv-party-line">' + esc(fAddr) + '</div>';
+  if (fCity || fState) fromLines += '<div class="pv-party-line">' + esc([fCity,fState].filter(Boolean).join(', ')) + '</div>';
+  if (fCountry) fromLines += '<div class="pv-party-line">' + esc(fCountry) + '</div>';
+  if (fPhone)   fromLines += '<div class="pv-party-line">' + esc(fPhone) + '</div>';
+  if (fBizNo)   fromLines += '<div class="pv-party-line">Reg: ' + esc(fBizNo) + '</div>';
+
+  // to lines
+  var toLines = '';
+  if (tName)   toLines += '<div class="pv-party-name">' + esc(tName) + '</div>';
+  if (tEmail)  toLines += '<div class="pv-party-line">' + esc(tEmail) + '</div>';
+  if (tAddr)   toLines += '<div class="pv-party-line">' + esc(tAddr) + '</div>';
+  if (tCity || tState) toLines += '<div class="pv-party-line">' + esc([tCity,tState].filter(Boolean).join(', ')) + '</div>';
+  if (tCountry) toLines += '<div class="pv-party-line">' + esc(tCountry) + '</div>';
+  if (tPhone)  toLines += '<div class="pv-party-line">Tel: ' + esc(tPhone) + '</div>';
+  if (tMobile) toLines += '<div class="pv-party-line">Mobile: ' + esc(tMobile) + '</div>';
+  if (tFax)    toLines += '<div class="pv-party-line">Fax: ' + esc(tFax) + '</div>';
+
+  // items rows — show per-item tax % in a separate column
+  var itemRows = '';
+  var hasItemTax = items.some(function(it){ return (it.tax||0) > 0; });
+  items.forEach(function(it){
+    var base = (it.rate||0)*(it.qty||0);
+    var itemTaxAmt = base * (it.tax||0) / 100;
+    var lineAmt = base + itemTaxAmt;
+    var noteHtml = it.note ? '<div class="pv-desc-note">' + esc(it.note) + '</div>' : '';
+    var taxCol = hasItemTax
+      ? '<td class="r">' + ((it.tax||0) > 0 ? (it.tax) + '%' : '—') + '</td>'
+      : '';
+    itemRows += '<tr>'
+      + '<td><div class="pv-desc-main">' + (esc(it.desc)||'—') + '</div>' + noteHtml + '</td>'
+      + '<td class="r">' + cur + (it.rate||0).toFixed(2) + '</td>'
+      + '<td class="r">' + (it.qty||0) + '</td>'
+      + taxCol
+      + '<td class="r">' + cur + lineAmt.toFixed(2) + '</td>'
+      + '</tr>';
+  });
+
+  // recalculate totals from items (per-item tax)
+  var pvSubtotal = 0; var pvTaxTotal = 0;
+  items.forEach(function(it){
+    var base = (it.rate||0)*(it.qty||0);
+    pvSubtotal += base;
+    pvTaxTotal += base * (it.tax||0) / 100;
+  });
+  var pvDiscType = $id('discType').value;
+  var pvDiscRate = parseFloat($id('discRate') ? $id('discRate').value : 0)||0;
+  var pvDiscAmt  = pvDiscType==='pct' ? pvSubtotal*pvDiscRate/100 : (pvDiscType==='flat' ? pvDiscRate : 0);
+  var pvTotal    = pvSubtotal - pvDiscAmt + pvTaxTotal;
+
+  // totals rows — real <tr><td> rows inside the totals table
+  function tRow(label, val, isGrand){
+    var lblStyle = 'padding:3px 12px 3px 0;font-size:11.5px;color:#555;white-space:nowrap;text-align:left;'
+      + (isGrand ? 'font-size:13px;font-weight:800;color:#1f2328;border-top:2px solid #1f2328;padding-top:6px;' : '');
+    var valStyle = 'padding:3px 0;font-size:11.5px;font-weight:600;color:#1f2328;white-space:nowrap;text-align:right;'
+      + (isGrand ? 'font-size:13px;font-weight:800;border-top:2px solid #1f2328;padding-top:6px;' : '');
+    return '<tr><td style="' + lblStyle + '">' + label + '</td><td style="' + valStyle + '">' + val + '</td></tr>';
+  }
+  var totalsHtml = tRow('Subtotal', cur + pvSubtotal.toFixed(2));
+  if (pvDiscAmt > 0){
+    var dLabel = pvDiscType==='pct' ? 'Discount ('+pvDiscRate+'%)' : 'Discount';
+    totalsHtml += tRow(dLabel, '<span style="color:#e74c3c;">&minus;'+cur+pvDiscAmt.toFixed(2)+'</span>');
+  }
+  if (pvTaxTotal > 0){
+    totalsHtml += tRow('Tax', cur + pvTaxTotal.toFixed(2));
+  }
+  // separator row before Balance Due
+  totalsHtml += '<tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #ddd;margin:2px 0;"></div></td></tr>';
+  totalsHtml += tRow('Balance Due', cur + pvTotal.toFixed(2), true);
+
+  // notes
+  var notesHtml = notes
+    ? '<div class="pv-notes-section"><div class="pv-section-label">Notes</div><div class="pv-notes-text">' + esc(notes) + '</div></div>'
+    : '';
+
+  // signature — only include if canvas has actual drawn pixels
+  var sigHtml = '';
+  if (sigOpen) {
+    var sigCanvas = $id('sigCanvas');
+    var sigPixels = sigCanvas.getContext('2d').getImageData(0, 0, sigCanvas.width, sigCanvas.height).data;
+    var hasSig = false;
+    for (var px = 3; px < sigPixels.length; px += 4) { if (sigPixels[px] > 0) { hasSig = true; break; } }
+    if (hasSig) {
+      var sigData = sigCanvas.toDataURL();
+      sigHtml = '<div class="pv-sig-section">'
+        + '<div class="pv-section-label">Authorised Signature</div>'
+        + '<img class="pv-sig-img" src="' + sigData + '" alt="Signature" />'
+        + (fName ? '<div class="pv-sig-name">' + esc(fName) + '</div>' : '')
+        + '</div>';
+    }
+  }
+
+  // photos — only include if any uploaded; no label
+  var photosHtml = '';
+  if (photos.length > 0) {
+    var imgs = photos.map(function(src){ return '<img class="pv-photo" src="' + src + '" alt="" />'; }).join('');
+    photosHtml = '<div class="pv-photos-section"><div class="pv-photos-grid">' + imgs + '</div></div>';
+  }
+
+  // right-side meta table — Invoice #, Date only (no Terms)
+  var metaRows = '';
+  if (invNum)  metaRows += '<div class="pv-inv-date-row"><span class="pv-inv-date-label">Invoice #</span><span class="pv-inv-date-val">' + esc(invNum) + '</span></div>';
+  if (invDate) metaRows += '<div class="pv-inv-date-row"><span class="pv-inv-date-label">Date</span><span class="pv-inv-date-val">' + invDate + '</span></div>';
+  if (dueDate && $id('invTerms').value === 'custom') metaRows += '<div class="pv-inv-date-row"><span class="pv-inv-date-label">Due Date</span><span class="pv-inv-date-val">' + dueDate + '</span></div>';
+
+  $id('printView').innerHTML =
+    '<div class="pv-page">'
+    + (accentColor !== 'none' ? '<div class="pv-accent" style="background:' + accentColor + ';"></div>' : '')
+
+    // ── HEADER: logo/biz left | title+meta right ──
+    + '<div class="pv-header">'
+    +   '<div class="pv-header-left">' + logoHtml + '</div>'
+    +   '<div class="pv-header-right">'
+    +     '<div class="pv-title"' + titleColor + '>' + esc(title) + '</div>'
+    +     (metaRows ? '<div class="pv-inv-date-table">' + metaRows + '</div>' : '')
+    +   '</div>'
+    + '</div>'
+
+    // ── PARTIES ──
+    + '<div class="pv-parties">'
+    +   '<div class="pv-party-cell"><div class="pv-party-label">From</div>' + (fromLines || '<span style="color:#ccc">—</span>') + '</div>'
+    +   '<div class="pv-party-cell"><div class="pv-party-label">Bill To</div>' + (toLines || '<span style="color:#ccc">—</span>') + '</div>'
+    + '</div>'
+
+    + '<hr class="pv-divider" />'
+
+    // ── ITEMS TABLE ──
+    + '<table class="pv-items-table">'
+    +   (hasItemTax
+      ? '<colgroup><col class="c-desc"/><col class="c-rate"/><col class="c-qty"/><col style="width:10%;"/><col class="c-amt"/></colgroup>'
+      : '<colgroup><col class="c-desc"/><col class="c-rate"/><col class="c-qty"/><col class="c-amt"/></colgroup>')
+    +   '<thead><tr>'
+    +     '<th>Description</th>'
+    +     '<th class="r">Rate</th>'
+    +     '<th class="r">Qty</th>'
+    +     (hasItemTax ? '<th class="r">Tax</th>' : '')
+    +     '<th class="r">Amount</th>'
+    +   '</tr></thead>'
+    +   '<tbody>' + itemRows + '</tbody>'
+    + '</table>'
+
+    // ── TOTALS — right-aligned using a real HTML table ──
+    + '<table style="width:100%;border-collapse:collapse;margin-top:4mm;margin-bottom:6mm;">'
+    +   '<tr><td style="width:50%;"></td>'
+    +   '<td style="width:50%;padding-left:8mm;">'
+    +     '<table style="width:100%;border-collapse:collapse;">' + totalsHtml + '</table>'
+    +   '</td></tr>'
+    + '</table>'
+
+    // ── NOTES ──
+    + notesHtml
+
+    // ── SIGNATURE always left; PHOTOS beside it only if both exist ──
+    + (sigHtml && photosHtml
+        ? '<table style="width:100%;border-collapse:collapse;margin-top:6mm;">'
+          +   '<tr>'
+          +     '<td style="width:50%;vertical-align:bottom;padding-right:8mm;">' + sigHtml + '</td>'
+          +     '<td style="width:50%;vertical-align:top;padding-left:4mm;">' + photosHtml + '</td>'
+          +   '</tr>'
+          + '</table>'
+        : (sigHtml
+            ? '<div style="margin-top:6mm;">' + sigHtml + '</div>'
+            : (photosHtml
+                ? '<div style="margin-top:6mm;">' + photosHtml + '</div>'
+                : '')))
+
+    + '<div class="pv-footer">Generated by Invoice Generator &mdash; ' + (invDate || '') + '</div>'
+    + '</div>'; // end pv-page
+}
+
+// ── TOOLBAR BUTTONS ──
+function doPrint(){
+  buildPrintView();
+  setTimeout(function(){ window.print(); }, 80);
+}
+
+$id('pdfBtn').addEventListener('click', doPrint);
+$id('printBtn').addEventListener('click', doPrint);
+
+$id('previewBtn').addEventListener('click', function(){
+  buildPrintView();
+  var pv = $id('printView');
+  pv.style.display = pv.style.display === 'block' ? 'none' : 'block';
+  pv.style.position = 'relative';
+  pv.style.border = '2px solid #3b82d4';
+  pv.style.borderRadius = '6px';
+  pv.style.marginTop = '16px';
+  pv.style.marginBottom = '16px';
+  this.textContent = pv.style.display === 'block' ? 'Hide Preview' : 'Preview';
+});
+
+$id('emailBtn').addEventListener('click', function(){
+  var to   = $id('toEmail').value || '';
+  var from = $id('fromName').value || 'Invoice';
+  var num  = $id('invNumber').value || '';
+  var sub  = encodeURIComponent('Invoice ' + num + ' from ' + from);
+  var body = encodeURIComponent('Please find attached the invoice ' + num + '.\n\nThank you.');
+  window.location.href = 'mailto:' + to + '?subject=' + sub + '&body=' + body;
+});
+
+// ── RESET ──
+$id('resetBtn').addEventListener('click', function(){
+  if (!confirm('Reset all fields?')) return;
+  ['fromName','fromEmail','fromAddr','fromCity','fromState','fromCountry','fromPhone','fromBizNo',
+   'toName','toEmail','toAddr','toCity','toState','toCountry','toPhone','toMobile','toFax',
+   'notesText'].forEach(function(id){ var el=$id(id); if(el) el.value=''; });
+  $id('invoiceTitle').value = 'Invoice';
+  $id('invoiceTitle').style.color = '';
+  $id('invNumber').value = 'INV0001';
+  $id('invDate').value = todayStr();
+  $id('dueDate').value = plusDays(30);
+  $id('invTerms').value = 'on_receipt';
+  $id('dueDateRow').style.display = 'none';
+  $id('discType').value = 'none'; $id('discRateRow').style.display='none'; $id('discountRow').style.display='none';
+  $id('currency').value = '₹|INR';
+  $id('notesCount').textContent = '0';
+  // logo
+  logoDataUrl = null;
+  $id('logoImg').style.display='none'; $id('logoImg').src='';
+  $id('logoIcon').style.display=''; $id('logoText').style.display='';
+  $id('logoInput').value='';
+  // photos
+  photos = []; renderPhotos();
+  // signature
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // color
+  accentColor='none';
+  document.querySelectorAll('.cswatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color')==='none'); });
+  $id('invoiceForm').style.borderTop='';
+  // items
+  items = [{desc:'',note:'',rate:0,qty:1,tax:0}];
+  renderItems(); recalc();
+});
+
+// ── ALL FIELD INPUTS → RECALC ──
+['fromName','fromEmail','fromAddr','fromPhone','fromBizNo',
+ 'toName','toEmail','toAddr','toPhone','toMobile','toFax',
+ 'invNumber','invDate','dueDate','invTerms'].forEach(function(id){
+  var el = $id(id); if (!el) return;
+  el.addEventListener('input', recalc);
+  el.addEventListener('change', recalc);
+});
+
+// ── INITIAL RENDER WITH DUMMY DATA ──
+$id('invoiceTitle').value  = 'Invoice';
+$id('invNumber').value     = 'INV-0001';
+$id('invTerms').value      = 'net30';
+
+// From (sender)
+$id('fromName').value   = 'Acme Solutions Pvt. Ltd.';
+$id('fromEmail').value  = 'billing@acmesolutions.com';
+$id('fromAddr').value   = '42, Business Park, Sector 18';
+$id('fromCity').value   = 'Gurugram';
+$id('fromState').value  = 'Haryana, 122015';
+$id('fromCountry').value= 'India';
+$id('fromPhone').value  = '+91 98765 43210';
+$id('fromBizNo').value  = 'GST: 06ABCDE1234F1Z5';
+$id('fromExtra').style.display = '';
+
+// Bill To (client)
+$id('toName').value     = 'Raj Enterprises';
+$id('toEmail').value    = 'accounts@rajenterprises.in';
+$id('toAddr').value     = '11, Lake View Road';
+$id('toCity').value     = 'Mumbai';
+$id('toState').value    = 'Maharashtra, 400001';
+$id('toCountry').value  = 'India';
+$id('toPhone').value    = '+91 91234 56789';
+$id('toMobile').value   = '+91 99887 76655';
+
+// Items — each has its own tax %
+items = [
+  { desc: 'Web Design & Development', note: 'Responsive website — 5 pages, mobile optimised', rate: 45000, qty: 1, tax: 18 },
+  { desc: 'SEO Setup & Optimisation', note: 'On-page SEO, sitemap, Google Analytics integration', rate: 8500,  qty: 1, tax: 18 },
+  { desc: 'Monthly Maintenance',      note: 'Hosting, updates & support — 3 months',             rate: 3000,  qty: 3, tax: 18 },
+  { desc: 'Logo Design',              note: 'Brand identity package with 3 revisions',            rate: 6500,  qty: 1, tax: 12 }
+];
+
+// Discount
+$id('discType').value = 'pct';
+$id('discRateRow').style.display  = '';
+$id('discountRow').style.display  = '';
+$id('discRate').value = '5';
+
+// Notes
+$id('notesText').value = 'Thank you for your business!\n\nBank: HDFC Bank | A/C: 1234567890 | IFSC: HDFC0001234\nPayment due within 30 days. Late payments attract 1.5% monthly interest.';
+$id('notesCount').textContent = $id('notesText').value.length;
+
+renderItems();
+recalc();
+
+})();
+</script>
+</body>
+</html>
