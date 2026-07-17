@@ -89,12 +89,12 @@ body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size:
 
 /* Items table */
 .items-section { margin-bottom: 8px; }
-.items-header { display: grid; grid-template-columns: 36px 1fr 120px 80px 90px 110px; gap: 0; background: #f5f6f8; border: 1px solid #dde1e7; border-bottom: none; }
+.items-header { display: grid; grid-template-columns: 36px 1fr 120px 80px 80px 80px 110px; gap: 0; background: #f5f6f8; border: 1px solid #dde1e7; border-bottom: none; }
 .items-header-cell { padding: 9px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #888; }
 .items-header-cell.right { text-align: right; }
 
 .item-row { border: 1px solid #dde1e7; border-bottom: none; }
-.item-row-main { display: grid; grid-template-columns: 36px 1fr 120px 80px 90px 110px; gap: 0; align-items: stretch; }
+.item-row-main { display: grid; grid-template-columns: 36px 1fr 120px 80px 80px 80px 110px; gap: 0; align-items: stretch; }
 .item-del-cell { display: flex; align-items: center; justify-content: center; padding: 8px 4px; border-right: 1px solid #dde1e7; }
 .item-del-btn { background: #555; color: #fff; border: none; border-radius: 3px; width: 20px; height: 20px; font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .item-del-btn:hover { background: #e74c3c; }
@@ -306,7 +306,6 @@ body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size:
   <div class="form-col">
     <!-- Toolbar -->
     <div class="toolbar">
-      <button class="tb-btn" id="previewBtn">Preview</button>
       <div class="tb-divider"></div>
       <div class="tb-center">
         <span id="paymentSchedLabel" style="color:#aaa;">Payment scheduling</span>
@@ -400,7 +399,8 @@ body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size:
           <div class="items-header-cell">Description</div>
           <div class="items-header-cell right">Rate</div>
           <div class="items-header-cell right">QTY</div>
-          <div class="items-header-cell right">Tax %</div>
+          <div class="items-header-cell right">CGST %</div>
+          <div class="items-header-cell right">SGST %</div>
           <div class="items-header-cell right">Amount</div>
         </div>
         <div id="itemsBody"></div>
@@ -422,9 +422,13 @@ body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size:
             <span class="totals-label" id="discountLabel">Discount</span>
             <span class="totals-val" id="sumDiscount" style="color:#e74c3c;">-₹0.00</span>
           </div>
-          <div class="totals-row" id="taxTotalRow">
-            <span class="totals-label" id="taxLabel">Tax</span>
-            <span class="totals-val" id="sumTax">₹0.00</span>
+          <div class="totals-row" id="cgstTotalRow" style="display:none;">
+            <span class="totals-label">Central Tax (CGST)</span>
+            <span class="totals-val" id="sumCgst">₹0.00</span>
+          </div>
+          <div class="totals-row" id="sgstTotalRow" style="display:none;">
+            <span class="totals-label">State Tax (SGST)</span>
+            <span class="totals-val" id="sumSgst">₹0.00</span>
           </div>
           <div class="totals-row">
             <span class="totals-label">Total</span>
@@ -555,7 +559,7 @@ var sigDrawing = false;
 var sigLast = null;
 
 var items = [
-  { desc: '', note: '', rate: 0, qty: 1 }
+  { desc: '', note: '', rate: 0, qty: 1, cgst: 0, sgst: 0, hsn: '' }
 ];
 
 // ── HELPERS ──
@@ -688,6 +692,13 @@ function renderItems(){
     descInput.placeholder = 'Item Description';
     descInput.value = item.desc;
     descInput.addEventListener('input', function(){ items[idx].desc = this.value; recalc(); });
+    var hsnInput = document.createElement('input');
+    hsnInput.className = 'item-desc-input';
+    hsnInput.placeholder = 'HSN/SAC code';
+    hsnInput.value = item.hsn || '';
+    hsnInput.style.fontSize = '11px';
+    hsnInput.style.color = '#888';
+    hsnInput.addEventListener('input', function(){ items[idx].hsn = this.value; });
     var noteTA = document.createElement('textarea');
     noteTA.className = 'item-note-input';
     noteTA.placeholder = 'Additional details';
@@ -705,6 +716,7 @@ function renderItems(){
     charRow.appendChild(charSpan);
     charRow.appendChild(document.createTextNode('/5000'));
     descCell.appendChild(descInput);
+    descCell.appendChild(hsnInput);
     descCell.appendChild(noteTA);
     descCell.appendChild(charRow);
 
@@ -728,29 +740,41 @@ function renderItems(){
     qtyInput.addEventListener('input', function(){ items[idx].qty = parseFloat(this.value)||0; recalc(); });
     qtyCell.appendChild(qtyInput);
 
-    // tax % cell (per-item)
-    var taxCell = document.createElement('div');
-    taxCell.className = 'item-num-cell';
-    var taxInput = document.createElement('input');
-    taxInput.className = 'item-num-input';
-    taxInput.type = 'number'; taxInput.min = '0'; taxInput.max = '100'; taxInput.step = 'any';
-    taxInput.placeholder = '0';
-    taxInput.value = item.tax > 0 ? item.tax : '';
-    taxInput.addEventListener('input', function(){ items[idx].tax = parseFloat(this.value)||0; recalc(); });
-    taxCell.appendChild(taxInput);
+    // cgst % cell
+    var cgstCell = document.createElement('div');
+    cgstCell.className = 'item-num-cell';
+    var cgstInput = document.createElement('input');
+    cgstInput.className = 'item-num-input';
+    cgstInput.type = 'number'; cgstInput.min = '0'; cgstInput.max = '100'; cgstInput.step = 'any';
+    cgstInput.placeholder = '0';
+    cgstInput.value = (item.cgst||0) > 0 ? item.cgst : '';
+    cgstInput.addEventListener('input', function(){ items[idx].cgst = parseFloat(this.value)||0; recalc(); });
+    cgstCell.appendChild(cgstInput);
+
+    // sgst % cell
+    var sgstCell = document.createElement('div');
+    sgstCell.className = 'item-num-cell';
+    var sgstInput = document.createElement('input');
+    sgstInput.className = 'item-num-input';
+    sgstInput.type = 'number'; sgstInput.min = '0'; sgstInput.max = '100'; sgstInput.step = 'any';
+    sgstInput.placeholder = '0';
+    sgstInput.value = (item.sgst||0) > 0 ? item.sgst : '';
+    sgstInput.addEventListener('input', function(){ items[idx].sgst = parseFloat(this.value)||0; recalc(); });
+    sgstCell.appendChild(sgstInput);
 
     // amount cell
     var amtCell = document.createElement('div');
     amtCell.className = 'item-amt-cell';
     amtCell.id = 'item-amt-' + idx;
     var base = (item.rate||0) * (item.qty||0);
-    amtCell.textContent = fmtMoney(base + base * (item.tax||0) / 100);
+    amtCell.textContent = fmtMoney(base + base * ((item.cgst||0) + (item.sgst||0)) / 100);
 
     main.appendChild(delCell);
     main.appendChild(descCell);
     main.appendChild(rateCell);
     main.appendChild(qtyCell);
-    main.appendChild(taxCell);
+    main.appendChild(cgstCell);
+    main.appendChild(sgstCell);
     main.appendChild(amtCell);
     div.appendChild(main);
     tbody.appendChild(div);
@@ -758,13 +782,13 @@ function renderItems(){
 }
 
 function addItem(){
-  items.push({ desc: '', note: '', rate: 0, qty: 1, tax: 0 });
+  items.push({ desc: '', note: '', rate: 0, qty: 1, cgst: 0, sgst: 0, hsn: '' });
   renderItems();
   recalc();
 }
 
 function removeItem(idx){
-  if (items.length === 1){ items[0] = {desc:'',note:'',rate:0,qty:1,tax:0}; renderItems(); recalc(); return; }
+  if (items.length === 1){ items[0] = {desc:'',note:'',rate:0,qty:1,cgst:0,sgst:0,hsn:''}; renderItems(); recalc(); return; }
   items.splice(idx, 1);
   renderItems();
   recalc();
@@ -776,14 +800,17 @@ $id('addItemBtn').addEventListener('click', addItem);
 function recalc(){
   var cur = getCur();
   var subtotal = 0;
-  var taxTotal = 0;
+  var cgstTotal = 0;
+  var sgstTotal = 0;
 
   items.forEach(function(it, i){
     var base = (it.rate||0) * (it.qty||0);
-    var itemTax = base * (it.tax||0) / 100;
-    var lineAmt = base + itemTax;
+    var itemCgst = base * (it.cgst||0) / 100;
+    var itemSgst = base * (it.sgst||0) / 100;
+    var lineAmt = base + itemCgst + itemSgst;
     subtotal += base;
-    taxTotal += itemTax;
+    cgstTotal += itemCgst;
+    sgstTotal += itemSgst;
     var cell = document.getElementById('item-amt-'+i);
     if (cell) cell.textContent = cur + lineAmt.toFixed(2);
   });
@@ -798,13 +825,13 @@ function recalc(){
   $id('discountLabel').textContent = discLabel;
   $id('sumDiscount').textContent = '-' + cur + discAmt.toFixed(2);
 
-  // tax row — always visible, shows sum of all per-item taxes
-  $id('taxLabel').textContent = 'Tax';
-  $id('sumTax').textContent = cur + taxTotal.toFixed(2);
-  // hide tax row only when all items have 0% tax
-  $id('taxTotalRow').style.display = taxTotal > 0 ? '' : 'none';
+  // cgst / sgst rows — show only when any item has a value
+  $id('sumCgst').textContent = cur + cgstTotal.toFixed(2);
+  $id('cgstTotalRow').style.display = cgstTotal > 0 ? '' : 'none';
+  $id('sumSgst').textContent = cur + sgstTotal.toFixed(2);
+  $id('sgstTotalRow').style.display = sgstTotal > 0 ? '' : 'none';
 
-  var total = subtotal - discAmt + taxTotal;
+  var total = subtotal - discAmt + cgstTotal + sgstTotal;
 
   $id('sumSubtotal').textContent = cur + subtotal.toFixed(2);
   $id('sumTotal').textContent    = cur + total.toFixed(2);
@@ -965,33 +992,40 @@ function buildPrintView(){
   if (tMobile) toLines += '<div class="pv-party-line">Mobile: ' + esc(tMobile) + '</div>';
   if (tFax)    toLines += '<div class="pv-party-line">Fax: ' + esc(tFax) + '</div>';
 
-  // items rows — show per-item tax % in a separate column
+  // items rows — standard 4-col layout; CGST/SGST shown as sub-rows in description cell
   var itemRows = '';
-  var hasItemTax = items.some(function(it){ return (it.tax||0) > 0; });
+  var hasItemTax = items.some(function(it){ return (it.cgst||0) > 0 || (it.sgst||0) > 0; });
   items.forEach(function(it){
     var base = (it.rate||0)*(it.qty||0);
-    var itemTaxAmt = base * (it.tax||0) / 100;
-    var lineAmt = base + itemTaxAmt;
+    var itemCgstAmt = base * (it.cgst||0) / 100;
+    var itemSgstAmt = base * (it.sgst||0) / 100;
+    var lineAmt = base + itemCgstAmt + itemSgstAmt;
     var noteHtml = it.note ? '<div class="pv-desc-note">' + esc(it.note) + '</div>' : '';
-    var taxCol = hasItemTax
-      ? '<td class="r">' + ((it.tax||0) > 0 ? (it.tax) + '%' : '—') + '</td>'
-      : '';
+    // Tax sub-rows in the description cell (matching invoice image style)
+    var taxSubRows = '';
+    if ((it.cgst||0) > 0) taxSubRows += '<div class="pv-desc-note" style="margin-top:4px;">CGST @ ' + it.cgst + '%</div>';
+    if ((it.sgst||0) > 0) taxSubRows += '<div class="pv-desc-note">SGST @ ' + it.sgst + '%</div>';
+    // Tax amounts in the amount cell — shown as sub-rows aligned right
+    var taxAmtRows = '';
+    if ((it.cgst||0) > 0) taxAmtRows += '<div style="font-size:10.5px;color:#555;margin-top:4px;">' + cur + itemCgstAmt.toFixed(2) + '</div>';
+    if ((it.sgst||0) > 0) taxAmtRows += '<div style="font-size:10.5px;color:#555;">' + cur + itemSgstAmt.toFixed(2) + '</div>';
     itemRows += '<tr>'
-      + '<td><div class="pv-desc-main">' + (esc(it.desc)||'—') + '</div>' + noteHtml + '</td>'
+      + '<td><div class="pv-desc-main">' + (esc(it.desc)||'—') + '</div>' + noteHtml + taxSubRows + '</td>'
       + '<td class="r">' + cur + (it.rate||0).toFixed(2) + '</td>'
       + '<td class="r">' + (it.qty||0) + '</td>'
-      + taxCol
-      + '<td class="r">' + cur + lineAmt.toFixed(2) + '</td>'
+      + '<td class="r"><div>' + cur + lineAmt.toFixed(2) + '</div>' + taxAmtRows + '</td>'
       + '</tr>';
   });
 
-  // recalculate totals from items (per-item tax)
-  var pvSubtotal = 0; var pvTaxTotal = 0;
+  // recalculate totals from items (per-item CGST + SGST)
+  var pvSubtotal = 0; var pvCgstTotal = 0; var pvSgstTotal = 0;
   items.forEach(function(it){
     var base = (it.rate||0)*(it.qty||0);
     pvSubtotal += base;
-    pvTaxTotal += base * (it.tax||0) / 100;
+    pvCgstTotal += base * (it.cgst||0) / 100;
+    pvSgstTotal += base * (it.sgst||0) / 100;
   });
+  var pvTaxTotal = pvCgstTotal + pvSgstTotal;
   var pvDiscType = $id('discType').value;
   var pvDiscRate = parseFloat($id('discRate') ? $id('discRate').value : 0)||0;
   var pvDiscAmt  = pvDiscType==='pct' ? pvSubtotal*pvDiscRate/100 : (pvDiscType==='flat' ? pvDiscRate : 0);
@@ -1011,7 +1045,8 @@ function buildPrintView(){
     totalsHtml += tRow(dLabel, '<span style="color:#e74c3c;">&minus;'+cur+pvDiscAmt.toFixed(2)+'</span>');
   }
   if (pvTaxTotal > 0){
-    totalsHtml += tRow('Tax', cur + pvTaxTotal.toFixed(2));
+    totalsHtml += tRow('Central Tax (CGST)', cur + pvCgstTotal.toFixed(2));
+    totalsHtml += tRow('State Tax (SGST)', cur + pvSgstTotal.toFixed(2));
   }
   // separator row before Balance Due
   totalsHtml += '<tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #ddd;margin:2px 0;"></div></td></tr>';
@@ -1075,14 +1110,11 @@ function buildPrintView(){
 
     // ── ITEMS TABLE ──
     + '<table class="pv-items-table">'
-    +   (hasItemTax
-      ? '<colgroup><col class="c-desc"/><col class="c-rate"/><col class="c-qty"/><col style="width:10%;"/><col class="c-amt"/></colgroup>'
-      : '<colgroup><col class="c-desc"/><col class="c-rate"/><col class="c-qty"/><col class="c-amt"/></colgroup>')
+    +   '<colgroup><col class="c-desc"/><col class="c-rate"/><col class="c-qty"/><col class="c-amt"/></colgroup>'
     +   '<thead><tr>'
     +     '<th>Description</th>'
     +     '<th class="r">Rate</th>'
     +     '<th class="r">Qty</th>'
-    +     (hasItemTax ? '<th class="r">Tax</th>' : '')
     +     '<th class="r">Amount</th>'
     +   '</tr></thead>'
     +   '<tbody>' + itemRows + '</tbody>'
@@ -1125,18 +1157,6 @@ function doPrint(){
 
 $id('pdfBtn').addEventListener('click', doPrint);
 $id('printBtn').addEventListener('click', doPrint);
-
-$id('previewBtn').addEventListener('click', function(){
-  buildPrintView();
-  var pv = $id('printView');
-  pv.style.display = pv.style.display === 'block' ? 'none' : 'block';
-  pv.style.position = 'relative';
-  pv.style.border = '2px solid #3b82d4';
-  pv.style.borderRadius = '6px';
-  pv.style.marginTop = '16px';
-  pv.style.marginBottom = '16px';
-  this.textContent = pv.style.display === 'block' ? 'Hide Preview' : 'Preview';
-});
 
 $id('emailBtn').addEventListener('click', function(){
   var to   = $id('toEmail').value || '';
